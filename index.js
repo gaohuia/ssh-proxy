@@ -5,10 +5,11 @@ const socks = require('socksv5');
 const fs = require("fs");
 const configFile = "./config.json";
 
-let sshConfig = JSON.parse(fs.readFileSync(configFile));
+let config = JSON.parse(fs.readFileSync(configFile));
+let sshConfig = config.ssh;
 sshConfig.privateKey = fs.readFileSync(sshConfig.privateKey);
 
-const port = 1089;
+const port = config.port || 1080;
 
 function GetSSHConnection() {
 	var static = GetSSHConnection;
