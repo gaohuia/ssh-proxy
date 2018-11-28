@@ -1,0 +1,11 @@
+{
+  "ssh" : {
+    "host": "127.0.0.1",
+  	"username": "user",
+  	"keepaliveInterval": 10000,
+  	"keepalive": 1,
+  	"keepaliveCountMax": 3,
+  	"privateKey": "Path to Key"
+  },
+  "port" : 1080
+}
