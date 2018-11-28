@@ -12,78 +12,78 @@ sshConfig.privateKey = fs.readFileSync(sshConfig.privateKey);
 const port = config.port || 1080;
 
 function GetSSHConnection() {
-	var static = GetSSHConnection;
+  var static = GetSSHConnection;
 
-	if (static.sshPromise != null) {
-		return static.sshPromise;
-	}
+  if (static.sshPromise != null) {
+    return static.sshPromise;
+  }
 
-	return static.sshPromise = new Promise((resolve, reject) => {
-		var conn = new Client();
+  return static.sshPromise = new Promise((resolve, reject) => {
+    var conn = new Client();
 
-		conn.on("ready", () => {
-			console.log("SSH Connection Ready");
-			resolve(conn);
-		});
+    conn.on("ready", () => {
+      console.log("SSH Connection Ready");
+      resolve(conn);
+    });
 
-		conn.on("error", (e) => {
-			console.log("SSH Connection Error: " + e);
-			static.sshPromise = null;
-		});
+    conn.on("error", (e) => {
+      console.log("SSH Connection Error: " + e);
+      static.sshPromise = null;
+    });
 
-		conn.connect(sshConfig);
-	});
+    conn.connect(sshConfig);
+  });
 }
 
 var srv = socks.createServer(function(info, accept, deny) {
-	GetSSHConnection().then((conn) => {
-		console.log("Forward out " + info.srcAddr + ":" + info.srcPort + " => " + info.dstAddr + ":" + info.dstPort);
-		conn.forwardOut(info.srcAddr, info.srcPort, info.dstAddr, info.dstPort, (err, stream) => {
-			if (err != null) {
-				console.log("Forward out failed, " + err);
-				deny();
-				return ;
-			}
+  GetSSHConnection().then((conn) => {
+    console.log("Forward out " + info.srcAddr + ":" + info.srcPort + " => " + info.dstAddr + ":" + info.dstPort);
+    conn.forwardOut(info.srcAddr, info.srcPort, info.dstAddr, info.dstPort, (err, stream) => {
+      if (err != null) {
+        console.log("Forward out failed, " + err);
+        deny();
+        return ;
+      }
 
-			console.log("Forward out success." + (typeof stream));
+      console.log("Forward out success." + (typeof stream));
 
-			var client = accept(true);
+      var client = accept(true);
 
-			if (!client) {
-				console.log("Bad client socket, Going to close");
-				stream.close();
-				deny();
-				return ;
-			}
+      if (!client) {
+        console.log("Bad client socket, Going to close");
+        stream.close();
+        deny();
+        return ;
+      }
 
-			stream.on("error", (e) => {
-				console.log("stream error: " + e);
-				client.close();
-			});
+      stream.on("error", (e) => {
+        console.log("stream error: " + e);
+        client.close();
+      });
 
-			client.on("error", (e) => {
-				console.log("client error: " + e);
-				stream.close();
-			});
+      client.on("error", (e) => {
+        console.log("client error: " + e);
+        stream.close();
+      });
 
-			client.on("close", () => {
-				console.log("client is closed!");
-			});
+      client.on("close", () => {
+        console.log("client is closed!");
+      });
 
-			stream.on("close", () => {
-				console.log("stream is closed!");
-			});
+      stream.on("close", () => {
+        console.log("stream is closed!");
+      });
 
-			stream.pipe(client);
-			client.pipe(stream);
-		});
-	}, () => {
-		deny();
-	});
+      stream.pipe(client);
+      client.pipe(stream);
+    });
+  }, () => {
+    deny();
+  });
 });
 
 srv.listen(port, 'localhost', function() {
-	console.log('SOCKS server listening on port ' + port);
+  console.log('SOCKS server listening on port ' + port);
 });
 
 srv.useAuth(socks.auth.None());
