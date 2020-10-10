@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "listen": "node index.js"
+    "listen": "node index.js config.google.los"
   },
   "author": "",
   "license": "ISC",

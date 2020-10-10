@@ -1,0 +1,22 @@
+<?xml verion="1.0" encoding="UTF-8" ?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>Label</key>
+		<string>cn.zeroplace.ssh-proxy</string>
+		<key>ProgramArguments</key>
+		<array>
+			<string>/usr/local/bin/node</string>
+			<string>index.js</string>
+			<string>config.stage.json</string>
+		</array>
+		<key>WorkingDirectory</key>
+		<string>/Users/tom/tools/ssh-proxy</string>
+		<key>RunAtLoad</key>
+		<false />
+		<key>StandardOutPath</key>
+		<string>/Users/tom/tools/ssh-proxy/out.log</string>
+		<key>KeepAlive</key>	
+		<false />
+	</dict>
+</plist>

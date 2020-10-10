@@ -1,0 +1,21 @@
+<?xml verion="1.0" encoding="UTF-8" ?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>Label</key>
+		<string>cn.zeroplace.vpn</string>
+		<key>ProgramArguments</key>
+		<array>
+            <string>/bin/sh</string>
+			<string>/Users/tom/tools/ssh-proxy/vpn.sh</string>
+		</array>
+		<key>WorkingDirectory</key>
+		<string>/Users/tom/tools/ssh-proxy</string>
+		<key>RunAtLoad</key>
+		<false />
+		<key>StandardOutPath</key>
+		<string>/Users/tom/tools/ssh-proxy/vpn.log</string>
+		<key>KeepAlive</key>	
+		<false />
+	</dict>
+</plist>

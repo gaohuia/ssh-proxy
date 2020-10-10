@@ -3,36 +3,79 @@
 const Client = require('ssh2').Client;
 const socks = require('socksv5');
 const fs = require("fs");
-const configFile = "./config.json";
+let configFile = __dirname + "/config.json";
+
+if (process.argv.length >= 3) {
+    configFile = process.argv[2];
+}
 
 let config = JSON.parse(fs.readFileSync(configFile));
-let sshConfig = config.ssh;
-sshConfig.privateKey = fs.readFileSync(sshConfig.privateKey);
+let sshConfigs = config.ssh;
+
+sshConfigs.forEach((config, index) => {
+  if (config.privateKeyFile) {
+    config.privateKey = fs.readFileSync(config.privateKeyFile)
+  }
+});
+
+console.log("Start");
 
 const port = config.port || 1080;
+let maxConnectionsPerHost = 5;
+let configIndex = 0;
 
-function GetSSHConnection() {
+function getConfig() {
+  return sshConfigs[configIndex ++ % sshConfigs.length];
+}
+
+function GetSSHConnection(random) {
   var static = GetSSHConnection;
-
-  if (static.sshPromise != null) {
-    return static.sshPromise;
+  if (!static.sshPromise) {
+    console.log("create new cache");
+    static.sshPromise = new Array(maxConnectionsPerHost);
   }
 
-  return static.sshPromise = new Promise((resolve, reject) => {
+  if (!random) {
+    random = Math.floor(Math.random() * maxConnectionsPerHost);
+  }
+
+
+  if (static.sshPromise[random] != null) {
+    return static.sshPromise[random];
+  }
+
+  return static.sshPromise[random] = new Promise((resolve, reject) => {
     var conn = new Client();
 
+    let sshConfig = getConfig();
+    console.log("Connecting " + random + " to " + sshConfig.host);
+
     conn.on("ready", () => {
-      console.log("SSH Connection Ready");
+      console.log("SSH Connection " + random + " to " + sshConfig.host + " ready");
       resolve(conn);
     });
 
     conn.on("error", (e) => {
-      console.log("SSH Connection Error: " + e);
-      static.sshPromise = null;
+      console.log("SSH Connection " + random + " to " + sshConfig.host  + " error: " + e);
+      conn.destroy();
     });
+
+    conn.on("close", () => {
+      console.log("SSH Connection " + random + " to " + sshConfig.host +  " closed");
+      static.sshPromise[random] = null;
+      GetSSHConnection(random);
+    });
+
 
     conn.connect(sshConfig);
   });
+}
+
+function prepareConnections()
+{
+  for (var i=0; i < maxConnectionsPerHost; i++) {
+    GetSSHConnection(i);
+  }
 }
 
 var srv = socks.createServer(function(info, accept, deny) {
@@ -58,7 +101,7 @@ var srv = socks.createServer(function(info, accept, deny) {
 
       stream.on("error", (e) => {
         console.log("stream error: " + e);
-        client.close();
+        stream.close();
       });
 
       client.on("error", (e) => {
@@ -82,8 +125,11 @@ var srv = socks.createServer(function(info, accept, deny) {
   });
 });
 
-srv.listen(port, 'localhost', function() {
+srv.listen(port, '0.0.0.0', function() {
   console.log('SOCKS server listening on port ' + port);
 });
 
+
 srv.useAuth(socks.auth.None());
+
+prepareConnections();
