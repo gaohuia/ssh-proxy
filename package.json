@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "listen": "node index.js config.google.los"
+    "listen": "node index.js config.vultr.japan",
+    "listen-los": "node index.js config.vultr.los"
   },
   "author": "",
   "license": "ISC",

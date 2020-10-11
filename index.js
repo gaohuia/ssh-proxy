@@ -28,24 +28,23 @@ function getConfig() {
   return sshConfigs[configIndex ++ % sshConfigs.length];
 }
 
+const ConnectionCache = {};
 function GetSSHConnection(random) {
-  var static = GetSSHConnection;
-  if (!static.sshPromise) {
+  if (!ConnectionCache.sshPromise) {
     console.log("create new cache");
-    static.sshPromise = new Array(maxConnectionsPerHost);
+    ConnectionCache.sshPromise = new Array(maxConnectionsPerHost);
   }
 
   if (!random) {
     random = Math.floor(Math.random() * maxConnectionsPerHost);
   }
 
-
-  if (static.sshPromise[random] != null) {
-    return static.sshPromise[random];
+  if (ConnectionCache.sshPromise[random] != null) {
+    return ConnectionCache.sshPromise[random];
   }
 
-  return static.sshPromise[random] = new Promise((resolve, reject) => {
-    var conn = new Client();
+  return ConnectionCache.sshPromise[random] = new Promise((resolve, reject) => {
+    const conn = new Client();
 
     let sshConfig = getConfig();
     console.log("Connecting " + random + " to " + sshConfig.host);
@@ -62,7 +61,7 @@ function GetSSHConnection(random) {
 
     conn.on("close", () => {
       console.log("SSH Connection " + random + " to " + sshConfig.host +  " closed");
-      static.sshPromise[random] = null;
+      ConnectionCache.sshPromise[random] = null;
       GetSSHConnection(random);
     });
 
