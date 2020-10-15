@@ -3,13 +3,17 @@
 const Client = require('ssh2').Client;
 const socks = require('socksv5');
 const fs = require("fs");
+const { spawn } = require("child_process");
+
+const httpProxyExec = __dirname + "/socks2http";
+
 let configFile = __dirname + "/config.json";
 
 if (process.argv.length >= 3) {
     configFile = process.argv[2];
 }
 
-let config = JSON.parse(fs.readFileSync(configFile));
+const config = JSON.parse(fs.readFileSync(configFile));
 let sshConfigs = config.ssh;
 
 sshConfigs.forEach((config, index) => {
@@ -126,7 +130,16 @@ var srv = socks.createServer(function(info, accept, deny) {
 
 srv.listen(port, '0.0.0.0', function() {
   console.log('SOCKS server listening on port ' + port);
+
+
+  if (config.httpPort) {
+    const childProcessOptions = {
+      'stdio': 'inherit'
+    };
+    spawn(httpProxyExec, ["-raddr", ":" + port, "-laddr", ":" + config.httpPort], childProcessOptions);
+  }
 });
+
 
 
 srv.useAuth(socks.auth.None());
