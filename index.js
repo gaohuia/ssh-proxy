@@ -1,13 +1,12 @@
 
 
-const Client = require('ssh2').Client;
-const socks = require('socksv5');
-const fs = require("fs");
-const { spawn } = require("child_process");
+const Client      = require('ssh2').Client;
+const socks       = require('socksv5');
+const fs          = require("fs");
+const { spawn }   = require("child_process");
 
-const httpProxyExec = __dirname + "/socks2http";
-
-let configFile = __dirname + "/config.json";
+const httpProxyExec   = __dirname + "/socks2http";
+let   configFile      = __dirname + "/config.json";
 
 if (process.argv.length >= 3) {
     configFile = process.argv[2];
@@ -22,11 +21,9 @@ sshConfigs.forEach((config, index) => {
   }
 });
 
-console.log("Start");
-
-const port = config.port || 1080;
-let maxConnectionsPerHost = 5;
-let configIndex = 0;
+const port                  = config.port || 1080;
+const maxConnectionsPerHost = 5;
+let configIndex             = 0;
 
 function getConfig() {
   return sshConfigs[configIndex ++ % sshConfigs.length];
@@ -69,7 +66,6 @@ function GetSSHConnection(random) {
       GetSSHConnection(random);
     });
 
-
     conn.connect(sshConfig);
   });
 }
@@ -91,10 +87,9 @@ var srv = socks.createServer(function(info, accept, deny) {
         return ;
       }
 
-      console.log("Forward out success." + (typeof stream));
+      console.log("Forward out success. " + (typeof stream));
 
-      var client = accept(true);
-
+      const client = accept(true);
       if (!client) {
         console.log("Bad client socket, Going to close");
         stream.close();
@@ -123,25 +118,19 @@ var srv = socks.createServer(function(info, accept, deny) {
       stream.pipe(client);
       client.pipe(stream);
     });
-  }, () => {
-    deny();
-  });
+  }, deny);
 });
 
 srv.listen(port, '0.0.0.0', function() {
   console.log('SOCKS server listening on port ' + port);
 
-
   if (config.httpPort) {
     const childProcessOptions = {
       'stdio': 'inherit'
     };
-    spawn(httpProxyExec, ["-raddr", ":" + port, "-laddr", ":" + config.httpPort], childProcessOptions);
+    spawn(httpProxyExec, ["-raddr", ":" + port, "-laddr", ":" + config.httpPort], childProcessOptions);;;;;;;;
   }
 });
 
-
-
 srv.useAuth(socks.auth.None());
-
 prepareConnections();
