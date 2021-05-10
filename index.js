@@ -1,5 +1,4 @@
 
-
 const Client      = require('ssh2').Client;
 const socks       = require('socksv5');
 const fs          = require("fs");
