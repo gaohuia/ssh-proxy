@@ -1,13 +1,17 @@
 
+const Client      = require('ssh2').Client;
+const socks       = require('socksv5');
+const fs          = require("fs");
+const { spawn }   = require("child_process");
 
-const Client = require('ssh2').Client;
-const socks = require('socksv5');
-const fs = require("fs");
-const { spawn } = require("child_process");
+const { ClientInfo, Status, ClientHeap } = require("./client");
+const { ListView, Rect } = require("./term");
+const NodeStream = require("stream");
 
-const httpProxyExec = __dirname + "/socks2http";
+const printf      = require("printf");
 
-let configFile = __dirname + "/config.json";
+const httpProxyExec   = __dirname + "/socks2http";
+let   configFile      = __dirname + "/config.json";
 
 if (process.argv.length >= 3) {
     configFile = process.argv[2];
@@ -22,11 +26,9 @@ sshConfigs.forEach((config, index) => {
   }
 });
 
-console.log("Start");
-
-const port = config.port || 1080;
-let maxConnectionsPerHost = 5;
-let configIndex = 0;
+const port                  = config.port || 1080;
+const maxConnectionsPerHost = 1;
+let configIndex             = 0;
 
 function getConfig() {
   return sshConfigs[configIndex ++ % sshConfigs.length];
@@ -69,7 +71,6 @@ function GetSSHConnection(random) {
       GetSSHConnection(random);
     });
 
-
     conn.connect(sshConfig);
   });
 }
@@ -81,67 +82,132 @@ function prepareConnections()
   }
 }
 
+const clientHeap = new ClientHeap();
+
+const listView = new ListView(new Rect(0, 0, 120, 10), clientHeap, (client) => {
+  const info = client.info;
+  const connection = `${info.srcAddr}:${info.srcPort} => ${info.dstAddr}:${info.dstPort}`;
+
+  return printf("%16s:%-5d  =>  %32s:%-5d %15s up:%-6d down:%-6d", 
+    info.srcAddr, 
+    info.srcPort,
+    info.dstAddr.substring(0, 32),
+    info.dstPort,
+    client.status,
+    client.up,
+    client.down
+  )
+});
+
+clientHeap.on("added", (client) => {
+  console.log(`client ${client.getId()} was added`);
+  // listView.addItem(client);
+
+  listView.render();
+  // console.log(clientHeap.toArray())
+});
+
+clientHeap.on("removed", (client) => {
+  console.log(`client ${client.getId()} was removed`);
+  // listView.removeItem(client);
+  listView.render();
+
+  // console.log(clientHeap.toArray())
+});
+
+setInterval(() => {
+  listView.render();
+}, 300);
+
 var srv = socks.createServer(function(info, accept, deny) {
+
+  const clientInfo = new ClientInfo(info, Status.Initialized);
+  clientHeap.add(clientInfo);
+
   GetSSHConnection().then((conn) => {
-    console.log("Forward out " + info.srcAddr + ":" + info.srcPort + " => " + info.dstAddr + ":" + info.dstPort);
     conn.forwardOut(info.srcAddr, info.srcPort, info.dstAddr, info.dstPort, (err, stream) => {
       if (err != null) {
-        console.log("Forward out failed, " + err);
+
+        clientInfo.status = Status.Error;
         deny();
+
+        clientHeap.remove(clientInfo);
         return ;
       }
 
-      console.log("Forward out success." + (typeof stream));
+      // console.log("Forward out success. " + (typeof stream));
 
-      var client = accept(true);
-
+      const client = accept(true);
       if (!client) {
         console.log("Bad client socket, Going to close");
         stream.close();
         deny();
+
+        clientHeap.remove(clientInfo);
         return ;
       }
 
+      clientInfo.status = Status.Accepted;
+
       stream.on("error", (e) => {
-        console.log("stream error: " + e);
         stream.close();
       });
 
       client.on("error", (e) => {
-        console.log("client error: " + e);
         stream.close();
       });
 
       client.on("close", () => {
-        console.log("client is closed!");
+        clientHeap.remove(clientInfo);
       });
 
       stream.on("close", () => {
-        console.log("stream is closed!");
+        clientHeap.remove(clientInfo);
       });
 
-      stream.pipe(client);
-      client.pipe(stream);
+      const counterUp = function () {
+        return NodeStream.Transform({
+          transform: (chunk, encoding, callback) => {
+            clientInfo.up += chunk.length;
+            callback(null, chunk);
+          }
+        });
+      }
+
+      const counterDown =  function(source) {
+        return NodeStream.Transform({
+          transform: (chunk, encoding, callback) => {
+            clientInfo.down += chunk.length;
+            callback(null, chunk);
+          }
+        });
+      }
+
+      NodeStream.pipeline(stream, counterDown(), client, () => {
+        
+      });
+
+      NodeStream.pipeline(client, counterUp(), stream, () => {
+
+      });
+
     });
   }, () => {
     deny();
+    clientHeap.remove(clientInfo);
   });
 });
 
-srv.listen(port, '0.0.0.0', function() {
-  console.log('SOCKS server listening on port ' + port);
-
+srv.listen(port, '127.0.0.1', function() {
 
   if (config.httpPort) {
     const childProcessOptions = {
       'stdio': 'inherit'
     };
-    spawn(httpProxyExec, ["-raddr", ":" + port, "-laddr", ":" + config.httpPort], childProcessOptions);
+    
+    spawn(httpProxyExec, ["-raddr", "127.0.0.1:" + port, "-laddr", "127.0.0.1:" + config.httpPort], childProcessOptions);
   }
 });
 
-
-
 srv.useAuth(socks.auth.None());
-
 prepareConnections();
