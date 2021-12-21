@@ -10,8 +10,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@tsconfig/node14": "^1.0.1",
+    "@types/node": "^16.9.2",
+    "@types/terminal-kit": "^1.28.4",
     "cli": ">=1.0.0",
+    "printf": "^0.6.1",
     "socksv5": "0.0.6",
-    "ssh2": "^0.6.1"
+    "ssh2": "^0.6.1",
+    "terminal-kit": "^2.1.6"
   }
 }
