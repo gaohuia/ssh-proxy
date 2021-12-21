@@ -86,17 +86,21 @@ const clientHeap = new ClientHeap();
 
 const listView = new ListView(new Rect(0, 0, 120, 10), clientHeap, (client) => {
   const info = client.info;
-  const connection = `${info.srcAddr}:${info.srcPort} => ${info.dstAddr}:${info.dstPort}`;
 
-  return printf("%16s:%-5d  =>  %32s:%-5d %15s up:%-6d down:%-6d", 
+  const life = - (client.createdAt.getTime() - (new Date()).getTime()) / 1000;
+
+  return printf("%16s:%-5d  =>  %32s:%-5d %15s %10d up:%-6d down:%-6d", 
     info.srcAddr, 
     info.srcPort,
     info.dstAddr.substring(0, 32),
     info.dstPort,
     client.status,
+    life,
     client.up,
     client.down
   )
+}, (a, b) => {
+  return -(a.createdAt.getTime() - b.createdAt.getTime());
 });
 
 clientHeap.on("added", (client) => {
@@ -135,8 +139,6 @@ var srv = socks.createServer(function(info, accept, deny) {
         return ;
       }
 
-      // console.log("Forward out success. " + (typeof stream));
-
       const client = accept(true);
       if (!client) {
         console.log("Bad client socket, Going to close");
@@ -151,10 +153,12 @@ var srv = socks.createServer(function(info, accept, deny) {
 
       stream.on("error", (e) => {
         stream.close();
+        clientHeap.remove(clientInfo);
       });
 
       client.on("error", (e) => {
         stream.close();
+        clientHeap.remove(clientInfo);
       });
 
       client.on("close", () => {
@@ -172,7 +176,7 @@ var srv = socks.createServer(function(info, accept, deny) {
             callback(null, chunk);
           }
         });
-      }
+      };
 
       const counterDown =  function(source) {
         return NodeStream.Transform({
@@ -181,15 +185,10 @@ var srv = socks.createServer(function(info, accept, deny) {
             callback(null, chunk);
           }
         });
-      }
+      };
 
-      NodeStream.pipeline(stream, counterDown(), client, () => {
-        
-      });
-
-      NodeStream.pipeline(client, counterUp(), stream, () => {
-
-      });
+      NodeStream.pipeline(stream, counterDown(), client, () => {});
+      NodeStream.pipeline(client, counterUp(), stream, () => {});
 
     });
   }, () => {

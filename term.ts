@@ -2,8 +2,10 @@
 import { terminal } from "terminal-kit";
 import { Heap } from "./heap";
 import printf from "printf";
+import { ClientInfo } from "./client";
 
 type FormatterFunction = (obj : any) => string;
+type SortFunction = (obj1 : any, obj2 : any) => number;
 
 function pad(s : string, length: number)
 {
@@ -28,12 +30,14 @@ class ListView {
   public rect : Rect;
   private heap : Heap;
   private formatter: FormatterFunction;
+  private sorter: SortFunction;
   private lines: number = 0;
 
-  constructor(rect: Rect, heap: Heap, formatter: FormatterFunction) {
+  constructor(rect: Rect, heap: Heap, formatter: FormatterFunction, sorter: SortFunction) {
     this.rect = rect;
     this.formatter = formatter;
     this.heap = heap;
+    this.sorter = sorter;
 
     // terminal.tabSet();
     // terminal.saveCursor();
@@ -48,7 +52,7 @@ class ListView {
     
     this.lines = 0;
 
-    const list = this.heap.toArray();
+    const list = [...this.heap.toArray()].sort(this.sorter);
 
     const max = terminal.height - 2;
 
@@ -93,15 +97,6 @@ function interval(interval : number, callback : CallableFunction, loop : number,
     clearInterval(i);
   };
 }
-
-// interval(1000, () => {
-//   listView.render();
-// }, 10, true);
-
-// // Terminal.getCursorLocation((err, x, y) => {
-// //   console.log(err, x, y);
-// // });
-
 
 export { ListView, Rect }
 

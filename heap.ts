@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { ClientInfo } from "./client";
 
 interface IdentifiedObject {
   getId(): number
@@ -28,7 +29,7 @@ class Heap extends EventEmitter {
 
   toArray()
   {
-    return this.heap.values();
+    return [... this.heap.values()].sort((a: IdentifiedObject, b: IdentifiedObject) => { return 0; });
   }
 }
 
